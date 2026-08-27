@@ -1,0 +1,22 @@
+from marshmallow import Schema, fields, validate
+
+class PropertyCreateSchema(Schema):
+    title = fields.Str(required=True)
+    property_type = fields.Str(required=True)
+    transaction_type = fields.Str(required=True)
+    province = fields.Str(allow_none=True)
+    city = fields.Str(required=True)
+    district = fields.Str(allow_none=True)
+    address = fields.Str(allow_none=True)
+    area = fields.Int(required=True, validate=validate.Range(min=1))
+    bedrooms = fields.Int(allow_none=True)
+    floor = fields.Int(allow_none=True)
+    total_floors = fields.Int(allow_none=True)
+    build_year = fields.Int(allow_none=True)
+    price = fields.Int(allow_none=True)
+    deposit = fields.Int(allow_none=True)
+    rent = fields.Int(allow_none=True)
+    description = fields.Str(allow_none=True)
+    latitude = fields.Float(allow_none=True)
+    longitude = fields.Float(allow_none=True)
+    features = fields.List(fields.Str(), allow_none=True)
