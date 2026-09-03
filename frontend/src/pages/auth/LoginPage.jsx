@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, SEED_USERS } from "../../context/AuthContext";
 
+const ROLE_LABELS = { ADMIN: "مدیر", AGENT: "مشاور", BUYER: "خریدار" };
+
 export default function LoginPage() {
   const { login, quickLogin, loading } = useAuth();
   const navigate = useNavigate();
@@ -17,42 +19,51 @@ export default function LoginPage() {
     else setError(res.error);
   };
 
+  const quick = async (role) => {
+    setError(null);
+    const res = await quickLogin(role);
+    if (res?.success) navigate("/dashboard");
+    else setError(res?.error);
+  };
+
   return (
-    <div dir="rtl" className="narrow">
-      <div className="card">
-        <h1 className="section-title">🔐 ورود به سیستم</h1>
-        <p className="section-desc">تست endpoint: <code>POST /api/auth/login</code></p>
+    <div className="narrow">
+      <h1 className="title" style={{ textAlign: "center", marginBottom: 8 }}>ورود</h1>
+      <p className="muted" style={{ textAlign: "center", marginBottom: 28 }}>
+        با شماره موبایل و رمز عبور خود وارد شوید.
+      </p>
 
-        {error && <div className="alert alert-danger">{error}</div>}
+      {error && <div className="alert alert-critical">{error}</div>}
 
-        <form onSubmit={submit}>
-          <div className="form-group">
-            <label>شماره موبایل</label>
-            <input value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="09120000002" />
-          </div>
-          <div className="form-group">
-            <label>رمز عبور</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
-          <button className="btn btn-primary" disabled={loading} type="submit">
-            {loading ? "..." : "ورود"}
-          </button>
-        </form>
+      <form onSubmit={submit} className="card">
+        <div className="form-group">
+          <label htmlFor="mobile">شماره موبایل</label>
+          <input id="mobile" value={mobile} onChange={(e) => setMobile(e.target.value)} autoComplete="username" />
+        </div>
+        <div className="form-group">
+          <label htmlFor="password">رمز عبور</label>
+          <input id="password" type="password" value={password}
+            onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+        </div>
+        <button className="btn btn-primary btn-block" disabled={loading} type="submit">
+          {loading ? "در حال ورود" : "ورود"}
+        </button>
+      </form>
 
-        <hr style={{ margin: "20px 0", borderColor: "var(--border-color)" }} />
-        <p style={{ fontSize: 13, marginBottom: 8 }}>ورود سریع با کاربران seed:</p>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {Object.keys(SEED_USERS).map((r) => (
-            <button key={r} className="btn btn-outline btn-sm"
-              onClick={async () => { const res = await quickLogin(r); if (res?.success) navigate("/dashboard"); else setError(res?.error); }}>
-              {SEED_USERS[r].name}
+      <div className="card card-quiet" style={{ marginTop: 20 }}>
+        <div className="eyebrow" style={{ marginBottom: 12 }}>حساب‌های آزمایشی</div>
+        <div className="stack">
+          {Object.entries(SEED_USERS).map(([role, u]) => (
+            <button key={role} className="btn btn-outline btn-sm btn-block" onClick={() => quick(role)}>
+              {ROLE_LABELS[role]} — {u.mobile}
             </button>
           ))}
         </div>
-        <p style={{ marginTop: 16, fontSize: 13 }}>
-          حساب ندارید؟ <Link to="/register" style={{ color: "var(--primary)" }}>ثبت‌نام</Link>
-        </p>
       </div>
+
+      <p className="muted" style={{ textAlign: "center", marginTop: 20 }}>
+        حساب ندارید؟ <Link to="/register" style={{ color: "var(--accent)" }}>ثبت‌نام کنید</Link>
+      </p>
     </div>
   );
 }

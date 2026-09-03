@@ -19,9 +19,10 @@ import MatchingPage from "./pages/matching/MatchingPage";
 
 function NotFound() {
   return (
-    <div dir="rtl" className="card">
-      <h1>۴۰۴ — صفحه پیدا نشد</h1>
-      <p style={{ marginTop: 8 }}><Link to="/">بازگشت به خانه</Link></p>
+    <div className="empty">
+      <div className="empty-title">صفحه پیدا نشد</div>
+      <p>نشانی وارد شده معتبر نیست یا صفحه جابه‌جا شده است.</p>
+      <Link to="/" className="btn btn-primary">بازگشت به خانه</Link>
     </div>
   );
 }
@@ -32,9 +33,9 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.error) {
       return (
-        <div dir="rtl" className="card alert alert-danger">
-          <h2>خطای غیرمنتظره در رابط کاربری</h2>
-          <pre style={{ whiteSpace: "pre-wrap" }}>{String(this.state.error)}</pre>
+        <div className="alert alert-critical">
+          <strong>خطای غیرمنتظره در رابط کاربری</strong>
+          <pre className="code-block" style={{ marginTop: 10 }}>{String(this.state.error)}</pre>
         </div>
       );
     }
@@ -65,7 +66,7 @@ function App() {
             </Routes>
           </ErrorBoundary>
         </main>
-        <footer className="footer">خانه من — پنل تست • بک‌اند: Flask + PostgreSQL • فرانت: React + Vite</footer>
+        <footer className="footer">خانه من — سامانه مدیریت و تطابق املاک</footer>
       </AuthProvider>
     </BrowserRouter>
   );

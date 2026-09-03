@@ -3,15 +3,18 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import PropertyImageUploader from "../../components/property/PropertyImageUploader";
 import PropertyLocation from "../../components/property/PropertyLocation";
-import { typeLabel, transactionLabel, formatPrice, featureLabel, apiError, scoreClass } from "../../utils/format";
 import { useAuth } from "../../context/AuthContext";
+import {
+  typeLabel, transactionLabel, formatPrice, featureLabel, apiError, scoreClass,
+} from "../../utils/format";
 
 export default function PropertyDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [p, setP] = useState(null);
-  const [matches, setMatches] = useState([]);
+  const [matches, setMatches] = useState(null);
+  const [loadingMatches, setLoadingMatches] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -20,116 +23,181 @@ export default function PropertyDetailPage() {
     try {
       const res = await api.get(`/properties/${id}`);
       setP(res.data.property);
-    } catch (e) { setError(apiError(e, "ملک یافت نشد")); }
-    finally { setLoading(false); }
+    } catch (e) {
+      setError(apiError(e, "ملک یافت نشد"));
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [id]);
 
   const loadMatches = async () => {
+    setLoadingMatches(true);
     try {
       const res = await api.get(`/matches/property/${id}`);
       setMatches(res.data.matches || []);
-    } catch (e) { setError(apiError(e)); }
+    } catch (e) {
+      setError(apiError(e));
+    } finally {
+      setLoadingMatches(false);
+    }
   };
 
   const remove = async () => {
-    if (!confirm("این ملک حذف شود؟")) return;
+    if (!window.confirm("این ملک برای همیشه حذف می‌شود. ادامه می‌دهید؟")) return;
     try {
       await api.delete(`/properties/${id}`);
       navigate("/properties");
-    } catch (e) { setError(apiError(e, "خطا در حذف")); }
+    } catch (e) {
+      setError(apiError(e, "خطا در حذف ملک"));
+    }
   };
 
   const deleteImage = async (imgId) => {
-    try { await api.delete(`/properties/${id}/images/${imgId}`); load(); }
-    catch (e) { setError(apiError(e)); }
+    try {
+      await api.delete(`/properties/${id}/images/${imgId}`);
+      load();
+    } catch (e) {
+      setError(apiError(e));
+    }
   };
 
-  if (loading) return <p className="muted" dir="rtl">در حال بارگذاری...</p>;
-  if (!p) return <div className="alert alert-danger" dir="rtl">{error || "ملک یافت نشد"}</div>;
+  if (loading) {
+    return (
+      <div className="stack">
+        <div className="skeleton" style={{ height: 40, width: "50%" }} />
+        <div className="skeleton skeleton-card" />
+      </div>
+    );
+  }
+
+  if (!p) return <div className="alert alert-critical">{error || "ملک یافت نشد"}</div>;
 
   return (
-    <div dir="rtl">
-      <div className="section-header">
+    <div>
+      <header className="page-header">
         <div>
-          <h1 className="section-title">{p.title}</h1>
-          <p className="section-desc">
-            <span className={`badge ${p.transaction_type === "RENT" ? "badge-rent" : "badge-sale"}`}>
-              {transactionLabel(p.transaction_type)}
-            </span>{" "}
-            {typeLabel(p.property_type)} • {p.city}{p.district ? ` - ${p.district}` : ""} • کد {p.id}
-          </p>
+          <div className="meta-row" style={{ marginBottom: 8 }}>
+            <span className="badge">{transactionLabel(p.transaction_type)}</span>
+            <span className="badge">{typeLabel(p.property_type)}</span>
+            <span className="badge">کد {p.id}</span>
+          </div>
+          <h1 className="title">{p.title}</h1>
+          <p className="lead">{[p.city, p.district].filter(Boolean).join("، ")}</p>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Link to={`/properties/${id}/edit`} className="btn btn-outline">✏️ ویرایش</Link>
-          <button className="btn btn-outline" style={{ color: "var(--danger)" }} onClick={remove}>🗑 حذف</button>
-          <Link to={`/matching?propertyId=${id}`} className="btn btn-primary">⚡ تطابق با خریداران</Link>
+        <div className="row">
+          <Link to={`/properties/${id}/edit`} className="btn btn-outline">ویرایش</Link>
+          <button className="btn btn-critical" onClick={remove}>حذف</button>
+          <Link to={`/matching?propertyId=${id}`} className="btn btn-primary">تطابق</Link>
         </div>
-      </div>
+      </header>
 
-      {error && <div className="alert alert-danger">{error}</div>}
+      {error && <div className="alert alert-critical">{error}</div>}
 
       <div className="grid-2">
-        <div className="card">
-          <h3 style={{ marginBottom: 12 }}>📋 مشخصات</h3>
-          <table className="detail-table">
-            <tbody>
-              <tr><td>قیمت</td><td>{p.transaction_type === "RENT" ? `ودیعه ${formatPrice(p.deposit)} / اجاره ${formatPrice(p.rent)}` : formatPrice(p.price)}</td></tr>
-              <tr><td>متراژ</td><td>{p.area} متر</td></tr>
-              <tr><td>اتاق خواب</td><td>{p.bedrooms ?? "-"}</td></tr>
-              <tr><td>طبقه</td><td>{p.floor ?? "-"} از {p.total_floors ?? "-"}</td></tr>
-              <tr><td>سال ساخت</td><td>{p.build_year ?? "-"}</td></tr>
-              <tr><td>وضعیت</td><td>{p.status}</td></tr>
-              <tr><td>مشاور</td><td>{p.agent_name || "-"} {p.agent_mobile ? `(${p.agent_mobile})` : ""}</td></tr>
-              <tr><td>امکانات</td><td>{p.features?.length ? p.features.map(featureLabel).join("، ") : "-"}</td></tr>
-            </tbody>
-          </table>
-          {p.description && <p style={{ marginTop: 12, lineHeight: 1.9 }}>{p.description}</p>}
-        </div>
-
-        <div>
+        <section>
           <div className="card">
-            <h3 style={{ marginBottom: 12 }}>🖼 تصاویر ({p.images?.length || 0})</h3>
+            <h2 className="card-title" style={{ marginBottom: 14 }}>مشخصات</h2>
+            <dl className="spec-list">
+              <dt>قیمت</dt>
+              <dd>
+                {p.transaction_type === "RENT"
+                  ? `${formatPrice(p.deposit)} ودیعه، ${formatPrice(p.rent)} اجاره`
+                  : formatPrice(p.price)}
+              </dd>
+              <dt>متراژ</dt><dd>{p.area} متر</dd>
+              <dt>اتاق خواب</dt><dd>{p.bedrooms ?? "—"}</dd>
+              <dt>طبقه</dt><dd>{p.floor ?? "—"} از {p.total_floors ?? "—"}</dd>
+              <dt>سال ساخت</dt><dd>{p.build_year ?? "—"}</dd>
+              <dt>وضعیت</dt><dd>{p.status}</dd>
+              <dt>مشاور</dt><dd>{p.agent_name || "—"}</dd>
+            </dl>
+
+            {p.features?.length > 0 && (
+              <div className="chip-row" style={{ marginTop: 18 }}>
+                {p.features.map((f) => <span className="chip" key={f}>{featureLabel(f)}</span>)}
+              </div>
+            )}
+
+            {p.description && (
+              <p className="card-body" style={{ marginTop: 18 }}>{p.description}</p>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <div className="card">
+            <h2 className="card-title" style={{ marginBottom: 14 }}>
+              تصاویر <span className="muted num">({p.images?.length || 0})</span>
+            </h2>
             {p.images?.length ? (
               <div className="image-grid">
                 {p.images.map((img) => (
                   <div className="image-tile" key={img.id}>
-                    <img src={img.image_url} alt="" />
-                    {img.is_primary && <span className="badge badge-sale">اصلی</span>}
-                    <button className="btn btn-sm btn-outline" onClick={() => deleteImage(img.id)}>حذف</button>
+                    <img src={img.image_url} alt="" loading="lazy" />
+                    <div className="image-tile-bar">
+                      {img.is_primary ? <span className="badge">اصلی</span> : <span />}
+                      <button className="btn btn-quiet btn-sm" onClick={() => deleteImage(img.id)}>
+                        حذف
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
-            ) : <p className="muted">تصویری ثبت نشده است.</p>}
+            ) : (
+              <p className="muted">تصویری ثبت نشده است.</p>
+            )}
           </div>
 
-          {isAuthenticated
-            ? <PropertyImageUploader propertyId={p.id} onUploadSuccess={load} />
-            : <div className="alert alert-warning">برای آپلود تصویر وارد شوید.</div>}
+          {isAuthenticated ? (
+            <PropertyImageUploader propertyId={p.id} onUploadSuccess={load} />
+          ) : (
+            <div className="alert alert-caution" style={{ marginTop: 20 }}>
+              برای افزودن تصویر باید <Link to="/login">وارد شوید</Link>.
+            </div>
+          )}
 
           <PropertyLocation
             latitude={p.latitude} longitude={p.longitude}
             address={p.address} city={p.city} district={p.district}
           />
-        </div>
+        </section>
       </div>
 
-      <div className="card" style={{ marginTop: 24 }}>
-        <div className="section-header" style={{ marginBottom: 12 }}>
-          <h3>⚡ خریداران متناسب با این ملک</h3>
-          <button className="btn btn-primary btn-sm" onClick={loadMatches}>محاسبه تطابق</button>
+      <section style={{ marginTop: 48 }}>
+        <div className="section-header">
+          <h2 className="subtitle">خریداران متناسب</h2>
+          <button className="btn btn-outline btn-sm" onClick={loadMatches} disabled={loadingMatches}>
+            {loadingMatches ? "در حال محاسبه" : "محاسبه تطابق"}
+          </button>
         </div>
-        {matches.length === 0 ? <p className="muted">برای محاسبه، دکمه بالا را بزنید.</p> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+
+        {matches === null ? (
+          <div className="card card-quiet">
+            <p className="muted">
+              برای مقایسه این ملک با تقاضاهای باز، دکمه «محاسبه تطابق» را بزنید.
+            </p>
+          </div>
+        ) : matches.length === 0 ? (
+          <div className="empty">
+            <div className="empty-title">تطابقی یافت نشد</div>
+            <p>هیچ درخواست بازی با نوع معامله این ملک هم‌خوانی ندارد.</p>
+            <Link to="/requests/new" className="btn btn-primary">ثبت درخواست</Link>
+          </div>
+        ) : (
+          <div className="card">
             {matches.map((m, i) => (
-              <div key={i} className="match-row">
+              <div className="list-row" key={i}>
                 <div>
-                  <strong>{typeLabel(m.buyer_request.property_type)}</strong> — {m.buyer_request.city}
-                  {m.buyer_request.district ? ` / ${m.buyer_request.district}` : ""} •{" "}
-                  {m.buyer_request.buyer_name}
-                  <div className="muted" style={{ fontSize: 12 }}>
-                    بودجه: {formatPrice(m.buyer_request.min_price)} تا {formatPrice(m.buyer_request.max_price)}
+                  <div className="list-row-title">
+                    {typeLabel(m.buyer_request.property_type)} — {m.buyer_request.city}
+                    {m.buyer_request.district ? `، ${m.buyer_request.district}` : ""}
+                  </div>
+                  <div className="meta-row">
+                    <span>{m.buyer_request.buyer_name}</span>
+                    <span className="sep">·</span>
+                    <span>{formatPrice(m.buyer_request.min_price)} تا {formatPrice(m.buyer_request.max_price)}</span>
                   </div>
                 </div>
                 <span className={`score-badge ${scoreClass(m.score)}`}>{m.score}%</span>
@@ -137,7 +205,7 @@ export default function PropertyDetailPage() {
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

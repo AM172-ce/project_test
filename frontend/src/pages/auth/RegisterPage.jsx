@@ -21,42 +21,43 @@ export default function RegisterPage() {
   };
 
   return (
-    <div dir="rtl" className="narrow">
-      <div className="card">
-        <h1 className="section-title">📝 ثبت‌نام</h1>
-        <p className="section-desc">تست endpoint: <code>POST /api/auth/register</code></p>
-        {error && <div className="alert alert-danger">{error}</div>}
-        <form onSubmit={submit}>
-          <div className="grid-2">
-            <div className="form-group">
-              <label>نام *</label>
-              <input value={form.first_name} onChange={set("first_name")} required />
-            </div>
-            <div className="form-group">
-              <label>نام خانوادگی *</label>
-              <input value={form.last_name} onChange={set("last_name")} required />
-            </div>
-          </div>
-          <div className="form-group">
-            <label>موبایل *</label>
-            <input value={form.mobile} onChange={set("mobile")} placeholder="09121234567" required />
-          </div>
-          <div className="form-group">
-            <label>ایمیل</label>
-            <input type="email" value={form.email} onChange={set("email")} />
-          </div>
-          <div className="form-group">
-            <label>رمز عبور *</label>
-            <input type="password" value={form.password} onChange={set("password")} required />
-          </div>
-          <button className="btn btn-primary" disabled={loading}>
-            {loading ? "..." : "ثبت‌نام"}
-          </button>
-        </form>
-        <p style={{ marginTop: 16, fontSize: 13 }}>
-          حساب دارید؟ <Link to="/login" style={{ color: "var(--primary)" }}>ورود</Link>
-        </p>
-      </div>
+    <div className="narrow">
+      <h1 className="title" style={{ textAlign: "center", marginBottom: 8 }}>ایجاد حساب</h1>
+      <p className="muted" style={{ textAlign: "center", marginBottom: 28 }}>
+        حساب جدید به صورت پیش‌فرض با نقش خریدار ساخته می‌شود.
+      </p>
+
+      {error && <div className="alert alert-critical">{error}</div>}
+
+      <form onSubmit={submit} className="card">
+        <div className="form-group">
+          <label htmlFor="fn">نام</label>
+          <input id="fn" value={form.first_name} onChange={set("first_name")} required />
+        </div>
+        <div className="form-group">
+          <label htmlFor="ln">نام خانوادگی</label>
+          <input id="ln" value={form.last_name} onChange={set("last_name")} required />
+        </div>
+        <div className="form-group">
+          <label htmlFor="mb">شماره موبایل</label>
+          <input id="mb" value={form.mobile} onChange={set("mobile")} placeholder="09121234567" required />
+        </div>
+        <div className="form-group">
+          <label htmlFor="em">ایمیل <span className="muted">(اختیاری)</span></label>
+          <input id="em" type="email" value={form.email} onChange={set("email")} />
+        </div>
+        <div className="form-group">
+          <label htmlFor="pw">رمز عبور</label>
+          <input id="pw" type="password" value={form.password} onChange={set("password")} required />
+        </div>
+        <button className="btn btn-primary btn-block" disabled={loading}>
+          {loading ? "در حال ثبت" : "ثبت‌نام"}
+        </button>
+      </form>
+
+      <p className="muted" style={{ textAlign: "center", marginTop: 20 }}>
+        قبلاً ثبت‌نام کرده‌اید؟ <Link to="/login" style={{ color: "var(--accent)" }}>ورود</Link>
+      </p>
     </div>
   );
 }

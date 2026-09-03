@@ -1,102 +1,66 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { typeLabel, transactionLabel, formatPrice, featureLabel, scoreClass } from "../../utils/format";
 
-const TYPE_TRANSLATIONS = {
-  APARTMENT: "آپارتمان",
-  VILLA: "ویلا",
-  OFFICE: "اداری",
-  COMMERCIAL: "تجاری",
-  LAND: "زمین",
-};
-
-export default function BuyerRequestCard({ request, onMatchClick }) {
+export default function BuyerRequestCard({ request }) {
   if (!request) return null;
-  const score = request.match_score ?? request.score;
-  const typeFa = TYPE_TRANSLATIONS[request.property_type] || request.property_type;
+  const r = request;
+  const score = r.match_score ?? r.score;
 
-  const getScoreClass = (s) => {
-    if (s >= 75) return "high";
-    if (s >= 40) return "mid";
-    return "low";
-  };
+  const budget =
+    r.min_price || r.max_price
+      ? `${formatPrice(r.min_price)} تا ${formatPrice(r.max_price)}`
+      : "نامشخص";
 
-  const formatPrice = (val) => {
-    if (!val) return "نامشخص";
-    if (val >= 1000000000) return `${(val / 1000000000).toLocaleString("fa-IR")} میلیارد تومان`;
-    if (val >= 1000000) return `${(val / 1000000).toLocaleString("fa-IR")} میلیون تومان`;
-    return `${val.toLocaleString("fa-IR")} تومان`;
-  };
+  const area =
+    r.min_area || r.max_area ? `${r.min_area ?? "—"} تا ${r.max_area ?? "—"} متر` : "نامشخص";
 
   return (
-    <div dir="rtl" className="request-card">
-      <div className="request-card-header">
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 20 }}>🎯</span>
-          <h3 style={{ fontSize: 16, fontWeight: 700 }}>{typeFa}</h3>
-          <span className={`badge ${request.transaction_type === "RENT" ? "badge-rent" : "badge-sale"}`}>
-            {request.transaction_type === "RENT" ? "رهن و اجاره" : "خرید"}
-          </span>
+    <article className="request-card">
+      <div className="request-card-head">
+        <div>
+          <h3 className="card-title" style={{ marginBottom: 4 }}>
+            {typeLabel(r.property_type)} — {r.city}{r.district ? `، ${r.district}` : ""}
+          </h3>
+          <div className="meta-row">
+            <span className="badge">{transactionLabel(r.transaction_type)}</span>
+            {r.buyer_name && (
+              <>
+                <span className="sep">·</span>
+                <span>{r.buyer_name}</span>
+              </>
+            )}
+          </div>
         </div>
-
         {score !== undefined && score !== null && (
-          <span className={`match-score-badge ${getScoreClass(score)}`}>
-            ⚡ {Math.round(score)}% تطابق
-          </span>
+          <span className={`score-badge ${scoreClass(score)}`}>{score}%</span>
         )}
       </div>
 
-      <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
-        📍 {request.city} {request.district ? `- ${request.district}` : ""}
-      </p>
+      <dl className="spec-list">
+        <dt>بودجه</dt>
+        <dd>{budget}</dd>
+        <dt>متراژ</dt>
+        <dd>{area}</dd>
+        <dt>اتاق خواب</dt>
+        <dd>{r.bedrooms ?? "—"}</dd>
+      </dl>
 
-      <div style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 4, color: "var(--text-main)" }}>
-        {(request.min_price || request.max_price) && (
-          <div>
-            💰 <strong>بودجه:</strong> {request.min_price ? `از ${formatPrice(request.min_price)}` : ""} {request.max_price ? `تا ${formatPrice(request.max_price)}` : ""}
-          </div>
-        )}
-        {(request.min_area || request.max_area) && (
-          <div>
-            📐 <strong>متراژ:</strong> {request.min_area || "-"} تا {request.max_area || "-"} متر
-          </div>
-        )}
-        {request.bedrooms && (
-          <div>
-            🛏️ <strong>تعداد خواب:</strong> {request.bedrooms} خوابه
-          </div>
-        )}
-      </div>
-
-      {request.features && request.features.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-          {request.features.map((f, i) => (
-            <span key={i} className="feature-tag">{f}</span>
+      {r.features?.length > 0 && (
+        <div className="chip-row">
+          {r.features.map((f) => (
+            <span className="chip" key={f}>{featureLabel(f)}</span>
           ))}
         </div>
       )}
 
-      {request.description && (
-        <p style={{ fontSize: 12, color: "var(--text-muted)", background: "#f8fafc", padding: 8, borderRadius: 6 }}>
-          {request.description}
-        </p>
-      )}
+      {r.description && <p className="card-body">{r.description}</p>}
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--border-color)" }}>
-        <small style={{ color: "var(--text-light)" }}>
-          {request.buyer_name ? `متقاضی: ${request.buyer_name}` : ""}
-        </small>
-        <div style={{ display: "flex", gap: 6 }}>
-          {onMatchClick ? (
-            <button className="btn btn-primary btn-sm" onClick={() => onMatchClick(request)}>
-              ⚡ مشاهده املاک منطبق
-            </button>
-          ) : (
-            <Link to={`/matching?requestId=${request.id}`} className="btn btn-primary btn-sm">
-              ⚡ مشاهده املاک منطبق
-            </Link>
-          )}
-        </div>
+      <div>
+        <Link to={`/matching?requestId=${r.id}`} className="btn btn-outline btn-sm">
+          مشاهده املاک متناسب
+        </Link>
       </div>
-    </div>
+    </article>
   );
 }

@@ -1,13 +1,11 @@
 import React from "react";
 
-export default function StatCard({ title, value, icon }) {
+export default function StatCard({ title, value, hint }) {
   return (
-    <div dir="rtl" className="stat-card">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span>{icon}</span>
-      </div>
-      <small>{title}</small>
-      <strong>{value ?? 0}</strong>
+    <div className="stat-card">
+      <div className="stat-label">{title}</div>
+      <div className="stat-value">{value}</div>
+      {hint && <div className="stat-hint">{hint}</div>}
     </div>
   );
 }
