@@ -52,18 +52,26 @@ export default function MatchingPage() {
       .then((r) => setProperties(r.data.properties || [])).catch(() => {});
   }, []);
 
+  const selectedId = mode === "property" ? propertyId : requestId;
+
   useEffect(() => {
-    const id = mode === "property" ? propertyId : requestId;
-    if (!id) { setResult(null); return; }
+    if (!selectedId) { setResult(null); setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
     setError(null);
-    api.get(`/matches/${mode}/${id}`)
-      .then((res) => { if (!cancelled) setResult(res.data); })
+    api.get(`/matches/${mode}/${selectedId}`)
+      // Tag the payload with the query that produced it, so a render that
+      // happens before this effect re-runs can never pair new `mode` with
+      // old data (that mismatch was throwing on m.property / m.buyer_request).
+      .then((res) => { if (!cancelled) setResult({ mode, id: selectedId, data: res.data }); })
       .catch((e) => { if (!cancelled) { setError(apiError(e, "خطا در محاسبه تطابق")); setResult(null); } })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [requestId, propertyId, mode]);
+  }, [mode, selectedId]);
+
+  // Only trust the result if it belongs to the current selection.
+  const activeResult =
+    result && result.mode === mode && result.id === selectedId ? result.data : null;
 
   const runEngine = async () => {
     setNotice(null);
@@ -86,7 +94,7 @@ export default function MatchingPage() {
     }
   };
 
-  const matches = result?.matches || [];
+  const matches = activeResult?.matches || [];
 
   return (
     <div>
@@ -107,6 +115,9 @@ export default function MatchingPage() {
       {error && <div className="alert alert-critical">{error}</div>}
 
       <div className="filters">
+        <p className="muted" style={{ marginBottom: 14 }}>
+          هر بار فقط یکی از دو حالت زیر فعال است؛ انتخاب یکی، دیگری را پاک می‌کند.
+        </p>
         <div className="grid-2">
           <div className="form-group">
             <label>بر اساس درخواست خریدار</label>
@@ -119,7 +130,11 @@ export default function MatchingPage() {
                 </option>
               ))}
             </select>
-            <div className="form-hint">املاک متناسب با این تقاضا نمایش داده می‌شود.</div>
+            <div className="form-hint">
+              {mode === "property" && selectedId
+                ? "با انتخاب درخواست، حالت «بر اساس ملک» پاک می‌شود."
+                : "املاک متناسب با این تقاضا نمایش داده می‌شود."}
+            </div>
           </div>
           <div className="form-group">
             <label>بر اساس ملک</label>
@@ -130,14 +145,18 @@ export default function MatchingPage() {
                 <option key={p.id} value={p.id}>{p.title} — {p.city}</option>
               ))}
             </select>
-            <div className="form-hint">خریداران متناسب با این فایل نمایش داده می‌شود.</div>
+            <div className="form-hint">
+              {mode === "request" && selectedId
+                ? "با انتخاب ملک، حالت «بر اساس درخواست» پاک می‌شود."
+                : "خریداران متناسب با این فایل نمایش داده می‌شود."}
+            </div>
           </div>
         </div>
       </div>
 
       {loading && <div className="skeleton" style={{ height: 160, borderRadius: 18 }} />}
 
-      {!loading && !result && (
+      {!loading && !activeResult && (
         <div className="empty">
           <div className="empty-title">یک مبنا انتخاب کنید</div>
           <p>برای مشاهده نتایج، یک درخواست خریدار یا یک ملک را از فهرست بالا انتخاب کنید.</p>
@@ -145,13 +164,13 @@ export default function MatchingPage() {
         </div>
       )}
 
-      {!loading && result && (
+      {!loading && activeResult && (
         <section>
           <div className="section-header">
             <h2 className="subtitle">
               {mode === "request"
-                ? `املاک متناسب با درخواست ${result.buyer_request?.buyer_name || ""}`
-                : `خریداران متناسب با ${result.property?.title || ""}`}
+                ? `املاک متناسب با درخواست ${activeResult.buyer_request?.buyer_name || ""}`
+                : `خریداران متناسب با ${activeResult.property?.title || ""}`}
             </h2>
             <span className="muted num">{matches.length} نتیجه</span>
           </div>
@@ -168,6 +187,7 @@ export default function MatchingPage() {
             <div className="stack" style={{ gap: 16 }}>
               {matches.map((m, i) => {
                 const t = mode === "request" ? m.property : m.buyer_request;
+                if (!t) return null;
                 return (
                   <article className="card match-card" key={i}>
                     <div className="match-card-head">

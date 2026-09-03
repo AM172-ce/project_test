@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 
 import "./index.css";
 import { AuthProvider } from "./context/AuthContext";
@@ -28,14 +28,36 @@ function NotFound() {
 }
 
 class ErrorBoundary extends React.Component {
-  constructor(p) { super(p); this.state = { error: null }; }
-  static getDerivedStateFromError(error) { return { error }; }
+  constructor(p) {
+    super(p);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  // Clear the error when the user navigates elsewhere, otherwise the boundary
+  // keeps rendering the failure and the app looks frozen until a full reload.
+  componentDidUpdate(prevProps) {
+    if (this.state.error && prevProps.routeKey !== this.props.routeKey) {
+      this.setState({ error: null });
+    }
+  }
+
   render() {
     if (this.state.error) {
       return (
         <div className="alert alert-critical">
           <strong>خطای غیرمنتظره در رابط کاربری</strong>
           <pre className="code-block" style={{ marginTop: 10 }}>{String(this.state.error)}</pre>
+          <button
+            className="btn btn-outline btn-sm"
+            style={{ marginTop: 12 }}
+            onClick={() => this.setState({ error: null })}
+          >
+            تلاش دوباره
+          </button>
         </div>
       );
     }
@@ -43,30 +65,41 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+function Layout() {
+  const location = useLocation();
+  return (
+    <>
+      <Navbar />
+      <main className="container">
+        {/* routeKey includes the query string so /matching?requestId=1 ->
+            ?propertyId=2 also clears a stale error */}
+        <ErrorBoundary routeKey={location.pathname + location.search}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/dashboard" element={<AgentDashboard />} />
+            <Route path="/properties" element={<PropertiesPage />} />
+            <Route path="/properties/new" element={<PropertyFormPage />} />
+            <Route path="/properties/:id" element={<PropertyDetailPage />} />
+            <Route path="/properties/:id/edit" element={<PropertyFormPage />} />
+            <Route path="/requests" element={<BuyerRequestsPage />} />
+            <Route path="/requests/new" element={<BuyerRequestFormPage />} />
+            <Route path="/matching" element={<MatchingPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </ErrorBoundary>
+      </main>
+      <footer className="footer">خانه من — سامانه مدیریت و تطابق املاک</footer>
+    </>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Navbar />
-        <main className="container">
-          <ErrorBoundary>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/dashboard" element={<AgentDashboard />} />
-              <Route path="/properties" element={<PropertiesPage />} />
-              <Route path="/properties/new" element={<PropertyFormPage />} />
-              <Route path="/properties/:id" element={<PropertyDetailPage />} />
-              <Route path="/properties/:id/edit" element={<PropertyFormPage />} />
-              <Route path="/requests" element={<BuyerRequestsPage />} />
-              <Route path="/requests/new" element={<BuyerRequestFormPage />} />
-              <Route path="/matching" element={<MatchingPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </ErrorBoundary>
-        </main>
-        <footer className="footer">خانه من — سامانه مدیریت و تطابق املاک</footer>
+        <Layout />
       </AuthProvider>
     </BrowserRouter>
   );
