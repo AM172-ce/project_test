@@ -32,7 +32,11 @@ services:
       context: .
       dockerfile: docker/Dockerfile.frontend
     environment:
-      VITE_API_URL: http://localhost:5000/api
+      # Browser calls the Vite dev server on a relative path; Vite proxies
+      # /api and /uploads to the backend container (see frontend/vite.config.js).
+      # This works no matter which host/IP the VM is reached on.
+      VITE_API_URL: /api
+      VITE_API_PROXY_TARGET: http://backend:5000
     ports: ["5173:5173"]
     depends_on: [backend]
 
